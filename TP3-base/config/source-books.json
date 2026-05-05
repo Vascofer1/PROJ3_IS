@@ -1,0 +1,16 @@
+{
+    "name": "jdbc-source-books",
+    "config": {
+        "connector.class": "io.confluent.connect.jdbc.JdbcSourceConnector",
+        "connection.url": "jdbc:postgresql://database:5432/project3",
+        "connection.user": "postgres",
+        "connection.password": "nopass",
+        "dialect.name": "PostgreSqlDatabaseDialect",
+        "mode": "bulk",
+        "query": "SELECT * FROM books;",
+        "poll.interval.ms": "10000",
+        "topic.prefix": "project3-books"
+    }
+
+    
+}
