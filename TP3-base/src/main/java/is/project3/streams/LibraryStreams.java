@@ -6,7 +6,7 @@ import com.google.gson.JsonParser;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.*;
 import org.apache.kafka.streams.kstream.*;
-
+import java.time.Duration;
 import java.util.Properties;
 
 public class LibraryStreams {
@@ -16,7 +16,8 @@ public class LibraryStreams {
     private static final String SALES_TOPIC = "book-sales";
     private static final String RESTOCKS_TOPIC = "book-restocks";
     private static final String STATISTICS_TOPIC = "book-statistics";
-
+    private static final String TOTAL_STATISTICS_TOPIC = "total-statistics";
+    private static final String WINDOW_STATISTICS_TOPIC = "window-statistics";
     private static final Gson gson = new Gson();
 
     public static void main(String[] args) {
@@ -31,13 +32,11 @@ public class LibraryStreams {
 
         KStream<String, String> salesStream = builder.stream(
                 SALES_TOPIC,
-                Consumed.with(Serdes.String(), Serdes.String())
-        );
+                Consumed.with(Serdes.String(), Serdes.String()));
 
         KStream<String, String> restocksStream = builder.stream(
                 RESTOCKS_TOPIC,
-                Consumed.with(Serdes.String(), Serdes.String())
-        );
+                Consumed.with(Serdes.String(), Serdes.String()));
 
         KStream<String, String> saleDeltas = salesStream.map((key, value) -> {
             JsonObject sale = JsonParser.parseString(value).getAsJsonObject();
@@ -91,6 +90,65 @@ public class LibraryStreams {
 
         KStream<String, String> allDeltas = saleDeltas.merge(restockDeltas);
 
+        TimeWindows oneMinuteWindow = TimeWindows.of(Duration.ofMinutes(1));
+
+        KTable<Windowed<String>, String> windowStatisticsTable = allDeltas
+                .map((bookId, deltaJson) -> KeyValue.pair("WINDOW", deltaJson))
+                .groupByKey(Grouped.with(Serdes.String(), Serdes.String()))
+                .windowedBy(oneMinuteWindow)
+                .aggregate(
+                        () -> gson.toJson(new WindowStatistic()),
+                        (key, deltaJson, currentJson) -> {
+                            BookDelta delta = gson.fromJson(deltaJson, BookDelta.class);
+                            WindowStatistic current = gson.fromJson(currentJson, WindowStatistic.class);
+
+                            current.id = 1;
+                            current.revenue = round(current.revenue + delta.revenue_delta);
+                            current.expenses = round(current.expenses + delta.expenses_delta);
+                            current.profit = round(current.revenue - current.expenses);
+
+                            return gson.toJson(current);
+                        },
+                        Materialized.with(Serdes.String(), Serdes.String()));
+
+        windowStatisticsTable
+                .toStream()
+                .map((windowedKey, statisticJson) -> {
+                    WindowStatistic statistic = gson.fromJson(statisticJson, WindowStatistic.class);
+
+                    statistic.id = 1;
+                    statistic.window_start = windowedKey.window().start();
+                    statistic.window_end = windowedKey.window().end();
+
+                    return KeyValue.pair(
+                            "1",
+                            toKafkaConnectWindowJson(gson.toJson(statistic)));
+                })
+                .to(WINDOW_STATISTICS_TOPIC, Produced.with(Serdes.String(), Serdes.String()));
+
+        KTable<String, String> totalStatisticsTable = allDeltas
+                .map((bookId, deltaJson) -> KeyValue.pair("TOTAL", deltaJson))
+                .groupByKey(Grouped.with(Serdes.String(), Serdes.String()))
+                .aggregate(
+                        () -> gson.toJson(new TotalStatistic()),
+                        (key, deltaJson, currentJson) -> {
+                            BookDelta delta = gson.fromJson(deltaJson, BookDelta.class);
+                            TotalStatistic current = gson.fromJson(currentJson, TotalStatistic.class);
+
+                            current.id = 1;
+                            current.revenue = round(current.revenue + delta.revenue_delta);
+                            current.expenses = round(current.expenses + delta.expenses_delta);
+                            current.profit = round(current.revenue - current.expenses);
+
+                            return gson.toJson(current);
+                        },
+                        Materialized.with(Serdes.String(), Serdes.String()));
+
+        totalStatisticsTable
+                .toStream()
+                .mapValues(LibraryStreams::toKafkaConnectTotalJson)
+                .to(TOTAL_STATISTICS_TOPIC, Produced.with(Serdes.String(), Serdes.String()));
+
         KTable<String, String> statisticsTable = allDeltas
                 .groupByKey(Grouped.with(Serdes.String(), Serdes.String()))
                 .aggregate(
@@ -107,8 +165,7 @@ public class LibraryStreams {
 
                             return gson.toJson(current);
                         },
-                        Materialized.with(Serdes.String(), Serdes.String())
-                );
+                        Materialized.with(Serdes.String(), Serdes.String()));
 
         statisticsTable
                 .toStream()
@@ -149,6 +206,56 @@ public class LibraryStreams {
                 + "}";
     }
 
+    private static String toKafkaConnectTotalJson(String totalJson) {
+        TotalStatistic statistic = gson.fromJson(totalJson, TotalStatistic.class);
+
+        return "{"
+                + "\"schema\":{"
+                + "\"type\":\"struct\","
+                + "\"fields\":["
+                + "{\"type\":\"int32\",\"optional\":false,\"field\":\"id\"},"
+                + "{\"type\":\"double\",\"optional\":true,\"field\":\"revenue\"},"
+                + "{\"type\":\"double\",\"optional\":true,\"field\":\"expenses\"},"
+                + "{\"type\":\"double\",\"optional\":true,\"field\":\"profit\"}"
+                + "],"
+                + "\"optional\":false"
+                + "},"
+                + "\"payload\":{"
+                + "\"id\":" + statistic.id + ","
+                + "\"revenue\":" + statistic.revenue + ","
+                + "\"expenses\":" + statistic.expenses + ","
+                + "\"profit\":" + statistic.profit
+                + "}"
+                + "}";
+    }
+
+    private static String toKafkaConnectWindowJson(String windowJson) {
+        WindowStatistic statistic = gson.fromJson(windowJson, WindowStatistic.class);
+
+        return "{"
+                + "\"schema\":{"
+                + "\"type\":\"struct\","
+                + "\"fields\":["
+                + "{\"type\":\"int32\",\"optional\":false,\"field\":\"id\"},"
+                + "{\"type\":\"int64\",\"optional\":true,\"field\":\"window_start\"},"
+                + "{\"type\":\"int64\",\"optional\":true,\"field\":\"window_end\"},"
+                + "{\"type\":\"double\",\"optional\":true,\"field\":\"revenue\"},"
+                + "{\"type\":\"double\",\"optional\":true,\"field\":\"expenses\"},"
+                + "{\"type\":\"double\",\"optional\":true,\"field\":\"profit\"}"
+                + "],"
+                + "\"optional\":false"
+                + "},"
+                + "\"payload\":{"
+                + "\"id\":" + statistic.id + ","
+                + "\"window_start\":" + statistic.window_start + ","
+                + "\"window_end\":" + statistic.window_end + ","
+                + "\"revenue\":" + statistic.revenue + ","
+                + "\"expenses\":" + statistic.expenses + ","
+                + "\"profit\":" + statistic.profit
+                + "}"
+                + "}";
+    }
+
     private static double round(double value) {
         return Math.round(value * 100.0) / 100.0;
     }
@@ -166,5 +273,21 @@ public class LibraryStreams {
         public double expenses = 0.0;
         public double profit = 0.0;
         public int stock = 0;
+    }
+
+    public static class TotalStatistic {
+        public int id = 1;
+        public double revenue = 0.0;
+        public double expenses = 0.0;
+        public double profit = 0.0;
+    }
+
+    public static class WindowStatistic {
+        public int id = 1;
+        public long window_start = 0L;
+        public long window_end = 0L;
+        public double revenue = 0.0;
+        public double expenses = 0.0;
+        public double profit = 0.0;
     }
 }

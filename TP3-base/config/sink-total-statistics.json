@@ -1,0 +1,27 @@
+{
+  "name": "jdbc-postgresql-sink-total-statistics",
+  "config": {
+    "connection.url": "jdbc:postgresql://database:5432/project3?user=postgres&password=nopass",
+    "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
+    "dialect.name": "PostgreSqlDatabaseDialect",
+    "tasks.max": "1",
+
+    "topics": "total-statistics",
+    "table.name.format": "total_statistics",
+
+    "auto.create": "false",
+    "auto.evolve": "false",
+
+    "insert.mode": "upsert",
+    "pk.mode": "record_value",
+    "pk.fields": "id",
+
+    "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": "true",
+    "value.converter.schemas.enable": "true"
+  }
+}
+
+
+

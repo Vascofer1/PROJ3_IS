@@ -1,8 +1,10 @@
+is/project3/streams/LibraryStreams$TotalStatistic.class
 is/project3/streams/LibraryStreams$BookDelta.class
 is/project3/streams/LibraryStreams$BookStatistic.class
 is/project3/events/SaleEvent.class
 is/project3/events/RestockEvent.class
 is/project3/events/BookInfo.class
+is/project3/streams/LibraryStreams$WindowStatistic.class
 is/project3/streams/LibraryStreams.class
 is/project3/cli/AuthorCLI.class
 is/project3/producers/SalesProducer.class
