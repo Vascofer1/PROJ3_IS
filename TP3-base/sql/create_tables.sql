@@ -19,3 +19,19 @@ CREATE TABLE book_statistics (
     profit REAL DEFAULT 0,
     stock INTEGER DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS total_statistics (
+    id INTEGER PRIMARY KEY,
+    revenue DOUBLE PRECISION DEFAULT 0,
+    expenses DOUBLE PRECISION DEFAULT 0,
+    profit DOUBLE PRECISION DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS window_statistics (
+    id INTEGER PRIMARY KEY,
+    window_start BIGINT,
+    window_end BIGINT,
+    revenue DOUBLE PRECISION DEFAULT 0,
+    expenses DOUBLE PRECISION DEFAULT 0,
+    profit DOUBLE PRECISION DEFAULT 0
+);
