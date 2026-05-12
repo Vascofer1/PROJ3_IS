@@ -44,6 +44,7 @@ public class SalesProducer {
 
             int units = random.nextInt(3) + 1;
             double salePrice = book.base_price;
+            salePrice += random.nextInt(7); 
             double total_price = Math.round((salePrice * units) * 100.0) / 100.0;
 
             SaleEvent event = new SaleEvent(
