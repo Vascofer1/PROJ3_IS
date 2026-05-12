@@ -17,7 +17,8 @@ CREATE TABLE book_statistics (
     revenue REAL DEFAULT 0,
     expenses REAL DEFAULT 0,
     profit REAL DEFAULT 0,
-    stock INTEGER DEFAULT 0
+    stock INTEGER DEFAULT 0,
+    sales_count INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS total_statistics (

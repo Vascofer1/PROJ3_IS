@@ -59,6 +59,7 @@ public class LibraryStreams {
             delta.revenue_delta = revenue;
             delta.expenses_delta = 0.0;
             delta.stock_delta = -units;
+            delta.sale_count_delta = 1;
 
             return KeyValue.pair(String.valueOf(bookId), gson.toJson(delta));
         });
@@ -84,6 +85,7 @@ public class LibraryStreams {
             delta.revenue_delta = 0.0;
             delta.expenses_delta = expenses;
             delta.stock_delta = units;
+            delta.sale_count_delta = 0;
 
             return KeyValue.pair(String.valueOf(bookId), gson.toJson(delta));
         });
@@ -162,6 +164,7 @@ public class LibraryStreams {
                             current.expenses = round(current.expenses + delta.expenses_delta);
                             current.profit = round(current.revenue - current.expenses);
                             current.stock = current.stock + delta.stock_delta;
+                            current.sales_count = current.sales_count + delta.sale_count_delta;
 
                             return gson.toJson(current);
                         },
@@ -192,7 +195,8 @@ public class LibraryStreams {
                 + "{\"type\":\"double\",\"optional\":true,\"field\":\"revenue\"},"
                 + "{\"type\":\"double\",\"optional\":true,\"field\":\"expenses\"},"
                 + "{\"type\":\"double\",\"optional\":true,\"field\":\"profit\"},"
-                + "{\"type\":\"int32\",\"optional\":true,\"field\":\"stock\"}"
+                + "{\"type\":\"int32\",\"optional\":true,\"field\":\"stock\"},"
+                + "{\"type\":\"int32\",\"optional\":true,\"field\":\"sales_count\"}"
                 + "],"
                 + "\"optional\":false"
                 + "},"
@@ -201,7 +205,8 @@ public class LibraryStreams {
                 + "\"revenue\":" + statistic.revenue + ","
                 + "\"expenses\":" + statistic.expenses + ","
                 + "\"profit\":" + statistic.profit + ","
-                + "\"stock\":" + statistic.stock
+                + "\"stock\":" + statistic.stock + ","
+                + "\"sales_count\":" + statistic.sales_count
                 + "}"
                 + "}";
     }
@@ -265,6 +270,7 @@ public class LibraryStreams {
         public double revenue_delta;
         public double expenses_delta;
         public int stock_delta;
+        public int sale_count_delta;
     }
 
     public static class BookStatistic {
@@ -273,6 +279,7 @@ public class LibraryStreams {
         public double expenses = 0.0;
         public double profit = 0.0;
         public int stock = 0;
+        public int sales_count = 0;
     }
 
     public static class TotalStatistic {
