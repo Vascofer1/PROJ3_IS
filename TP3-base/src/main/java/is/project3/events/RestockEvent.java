@@ -4,6 +4,7 @@ public class RestockEvent {
     public int book_id;
     public String title;
     public int units;
+    public double unit_purchase_price;
     public double purchase_price;
     public long timestamp;
 
@@ -11,6 +12,7 @@ public class RestockEvent {
         this.book_id = book_id;
         this.title = title;
         this.units = units;
+        this.unit_purchase_price = purchase_price;
         this.purchase_price = purchase_price;
         this.timestamp = timestamp;
     }

@@ -26,6 +26,10 @@ public class AuthorCLI {
             System.out.println("10 - Current stock per book");
             System.out.println("11 - Average spent per sale per book");
             System.out.println("12 - Most profitable book");
+            System.out.println("13 - Add user");
+            System.out.println("14 - List users");
+            System.out.println("15 - Profit per user");
+            System.out.println("16 - Most profitable user");
             System.out.println("0 - Exit");
             System.out.print("Choose an option: ");
 
@@ -68,6 +72,18 @@ public class AuthorCLI {
                 case "12":
                     listMostProfitableBook();
                     break;
+                case "13":
+                    addUser(scanner);
+                    break;
+                case "14":
+                    listUsers();
+                    break;
+                case "15":
+                    listProfitPerUser();
+                    break;
+                case "16":
+                    listMostProfitableUser();
+                    break;
                 case "0":
                     System.out.println("Exiting...");
                     scanner.close();
@@ -75,6 +91,52 @@ public class AuthorCLI {
                 default:
                     System.out.println("Invalid option.");
             }
+        }
+    }
+
+    private static void addUser(Scanner scanner) {
+        System.out.print("User name: ");
+        String name = scanner.nextLine();
+
+        String sql = "INSERT INTO users (name) VALUES (?)";
+
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, name);
+            stmt.executeUpdate();
+
+            System.out.println("User added successfully.");
+
+        } catch (SQLException e) {
+            System.out.println("Error adding user: " + e.getMessage());
+        }
+    }
+
+    private static void listUsers() {
+        String sql = "SELECT id, name FROM users ORDER BY id";
+
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+                PreparedStatement stmt = conn.prepareStatement(sql);
+                ResultSet rs = stmt.executeQuery()) {
+
+            System.out.println("\nUsers:");
+            boolean hasResults = false;
+
+            while (rs.next()) {
+                hasResults = true;
+                int id = rs.getInt("id");
+                String name = rs.getString("name");
+
+                System.out.println(id + " - " + name);
+            }
+
+            if (!hasResults) {
+                System.out.println("No users available yet.");
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Error listing users: " + e.getMessage());
         }
     }
 
@@ -528,6 +590,109 @@ public class AuthorCLI {
 
         } catch (SQLException e) {
             System.out.println("Error listing most profitable book: " + e.getMessage());
+        }
+    }
+
+    private static void listProfitPerUser() {
+        String sql = """
+                    SELECT u.id,
+                           u.name,
+                           SUM(us.revenue) AS revenue,
+                           SUM(us.expenses) AS expenses,
+                           SUM(us.profit) AS profit,
+                           SUM(us.sales_count) AS sales_count
+                    FROM user_statistics us
+                    JOIN users u ON us.user_id = u.id
+                    GROUP BY u.id, u.name
+                    ORDER BY profit DESC, u.id
+                """;
+
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            System.out.println("\nProfit per user:");
+            boolean hasResults = false;
+
+            while (rs.next()) {
+                hasResults = true;
+                int id = rs.getInt("id");
+                String name = rs.getString("name");
+                double revenue = rs.getDouble("revenue");
+                double expenses = rs.getDouble("expenses");
+                double profit = rs.getDouble("profit");
+                int salesCount = rs.getInt("sales_count");
+
+                System.out.println(
+                        id + " - " + name +
+                                " | Revenue: " + revenue +
+                                " | Expenses: " + expenses +
+                                " | Profit: " + profit +
+                                " | Sales: " + salesCount);
+            }
+
+            if (!hasResults) {
+                System.out.println("No user profit statistics available yet.");
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Error listing profit per user: " + e.getMessage());
+        }
+    }
+
+    private static void listMostProfitableUser() {
+        String sql = """
+                    WITH profit_per_user AS (
+                        SELECT u.id,
+                               u.name,
+                               SUM(us.revenue) AS revenue,
+                               SUM(us.expenses) AS expenses,
+                               SUM(us.profit) AS profit,
+                               SUM(us.sales_count) AS sales_count
+                        FROM user_statistics us
+                        JOIN users u ON us.user_id = u.id
+                        GROUP BY u.id, u.name
+                    ),
+                    max_profit AS (
+                        SELECT MAX(profit) AS value
+                        FROM profit_per_user
+                    )
+                    SELECT p.id, p.name, p.revenue, p.expenses, p.profit, p.sales_count
+                    FROM profit_per_user p
+                    JOIN max_profit mp ON p.profit = mp.value
+                    ORDER BY p.id
+                """;
+
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            System.out.println("\nMost profitable user(s):");
+            boolean hasResults = false;
+
+            while (rs.next()) {
+                hasResults = true;
+                int id = rs.getInt("id");
+                String name = rs.getString("name");
+                double revenue = rs.getDouble("revenue");
+                double expenses = rs.getDouble("expenses");
+                double profit = rs.getDouble("profit");
+                int salesCount = rs.getInt("sales_count");
+
+                System.out.println(
+                        id + " - " + name +
+                                " | Revenue: " + revenue +
+                                " | Expenses: " + expenses +
+                                " | Profit: " + profit +
+                                " | Sales: " + salesCount);
+            }
+
+            if (!hasResults) {
+                System.out.println("\nNo user profit statistics available yet.");
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Error listing most profitable user: " + e.getMessage());
         }
     }
 
