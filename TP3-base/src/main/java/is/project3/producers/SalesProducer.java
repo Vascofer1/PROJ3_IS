@@ -24,9 +24,15 @@ public class SalesProducer {
 
     public static void main(String[] args) throws Exception {
         List<BookInfo> books = loadBooksFromDatabase();
+        List<UserInfo> users = loadUsersFromDatabase();
 
         if (books.isEmpty()) {
             System.out.println("No books found in database. Add books before running the SalesProducer.");
+            return;
+        }
+
+        if (users.isEmpty()) {
+            System.out.println("No users found in database. Add users before running the SalesProducer.");
             return;
         }
 
@@ -41,18 +47,25 @@ public class SalesProducer {
 
         while (true) {
             BookInfo book = books.get(random.nextInt(books.size()));
+            UserInfo user = users.get(random.nextInt(users.size()));
 
             int units = random.nextInt(3) + 1;
             double salePrice = book.base_price;
             salePrice += random.nextInt(7); 
+            double unitPurchasePrice = round(book.base_price * 0.6);
             double total_price = Math.round((salePrice * units) * 100.0) / 100.0;
+            double profit = round(total_price - (unitPurchasePrice * units));
 
             SaleEvent event = new SaleEvent(
                     book.book_id,
                     book.title,
+                    user.user_id,
+                    user.name,
                     units,
                     salePrice,
+                    unitPurchasePrice,
                     total_price,
+                    profit,
                     System.currentTimeMillis()
             );
 
@@ -86,5 +99,39 @@ public class SalesProducer {
         }
 
         return books;
+    }
+
+    private static List<UserInfo> loadUsersFromDatabase() throws SQLException {
+        List<UserInfo> users = new ArrayList<>();
+
+        String sql = "SELECT id, name FROM users";
+
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                users.add(new UserInfo(
+                        rs.getInt("id"),
+                        rs.getString("name")
+                ));
+            }
+        }
+
+        return users;
+    }
+
+    private static double round(double value) {
+        return Math.round(value * 100.0) / 100.0;
+    }
+
+    private static class UserInfo {
+        private final int user_id;
+        private final String name;
+
+        private UserInfo(int user_id, String name) {
+            this.user_id = user_id;
+            this.name = name;
+        }
     }
 }
