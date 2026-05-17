@@ -1,8 +1,8 @@
-C:\Users\xitol\Mestrado\2 semestre\IS\PROJ3_IS\TP3-base\src\main\java\is\project3\events\BookInfo.java
-C:\Users\xitol\Mestrado\2 semestre\IS\PROJ3_IS\TP3-base\src\main\java\is\project3\streams\LibraryStreams.java
-C:\Users\xitol\Mestrado\2 semestre\IS\PROJ3_IS\TP3-base\src\main\java\is\project3\cli\AuthorCLI.java
-C:\Users\xitol\Mestrado\2 semestre\IS\PROJ3_IS\TP3-base\src\main\java\is\project3\streams\JsonSerde.java
-C:\Users\xitol\Mestrado\2 semestre\IS\PROJ3_IS\TP3-base\src\main\java\is\project3\producers\RestockProducer.java
-C:\Users\xitol\Mestrado\2 semestre\IS\PROJ3_IS\TP3-base\src\main\java\is\project3\events\SaleEvent.java
-C:\Users\xitol\Mestrado\2 semestre\IS\PROJ3_IS\TP3-base\src\main\java\is\project3\events\RestockEvent.java
-C:\Users\xitol\Mestrado\2 semestre\IS\PROJ3_IS\TP3-base\src\main\java\is\project3\producers\SalesProducer.java
+/workspace/src/main/java/is/project3/producers/RestockProducer.java
+/workspace/src/main/java/is/project3/events/RestockEvent.java
+/workspace/src/main/java/is/project3/streams/LibraryStreams.java
+/workspace/src/main/java/is/project3/producers/SalesProducer.java
+/workspace/src/main/java/is/project3/cli/AuthorCLI.java
+/workspace/src/main/java/is/project3/events/SaleEvent.java
+/workspace/src/main/java/is/project3/events/BookInfo.java
+/workspace/src/main/java/is/project3/streams/JsonSerde.java

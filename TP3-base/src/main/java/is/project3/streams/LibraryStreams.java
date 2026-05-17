@@ -52,7 +52,6 @@ public class LibraryStreams {
         Serde<SaleEvent> saleEventSerde = new JsonSerde<>(SaleEvent.class);
         Serde<RestockEvent> restockEventSerde = new JsonSerde<>(RestockEvent.class);
         Serde<BookDelta> bookDeltaSerde = new JsonSerde<>(BookDelta.class);
-        Serde<BookStatistic> bookStatisticSerde = new JsonSerde<>(BookStatistic.class);
         Serde<TotalStatistic> totalStatisticSerde = new JsonSerde<>(TotalStatistic.class);
         Serde<WindowStatistic> windowStatisticSerde = new JsonSerde<>(WindowStatistic.class);
         Serde<UserStatistic> userStatisticSerde = new JsonSerde<>(UserStatistic.class);
@@ -144,21 +143,57 @@ public class LibraryStreams {
                 .mapValues(LibraryStreams::toKafkaConnectTotalJson)
                 .to(TOTAL_STATISTICS_TOPIC, Produced.with(Serdes.String(), Serdes.String()));
 
-        KTable<String, BookStatistic> statisticsTable = allDeltas
+        KTable<String, BookDelta> revenueStatisticsTable = saleDeltas
                 .groupByKey(Grouped.with(Serdes.String(), bookDeltaSerde))
-                .aggregate(
-                        BookStatistic::new,
-                        (bookId, delta, current) -> {
+                .reduce(
+                        (current, delta) -> {
                             current.book_id = delta.book_id;
-                            current.revenue = round(current.revenue + delta.revenue_delta);
-                            current.expenses = round(current.expenses + delta.expenses_delta);
-                            current.profit = round(current.revenue - current.expenses);
-                            current.stock = current.stock + delta.stock_delta;
-                            current.sales_count = current.sales_count + delta.sale_count_delta;
+                            current.revenue_delta = round(current.revenue_delta + delta.revenue_delta);
+                            current.stock_delta = current.stock_delta + delta.stock_delta;
+                            current.sale_count_delta = current.sale_count_delta + delta.sale_count_delta;
 
                             return current;
                         },
-                        Materialized.with(Serdes.String(), bookStatisticSerde));
+                        Materialized.with(Serdes.String(), bookDeltaSerde));
+
+        KTable<String, BookDelta> expensesStatisticsTable = restockDeltas
+                .groupByKey(Grouped.with(Serdes.String(), bookDeltaSerde))
+                .reduce(
+                        (current, delta) -> {
+                            current.book_id = delta.book_id;
+                            current.expenses_delta = round(current.expenses_delta + delta.expenses_delta);
+                            current.stock_delta = current.stock_delta + delta.stock_delta;
+
+                            return current;
+                        },
+                        Materialized.with(Serdes.String(), bookDeltaSerde));
+
+        KTable<String, BookStatistic> statisticsTable = revenueStatisticsTable.outerJoin(
+                expensesStatisticsTable,
+                (revenueStats, expenseStats) -> {
+                    BookStatistic current = new BookStatistic();
+
+                    if (revenueStats != null) {
+                        current.book_id = revenueStats.book_id;
+                        current.revenue = round(current.revenue + revenueStats.revenue_delta);
+                        current.stock = current.stock + revenueStats.stock_delta;
+                        current.sales_count = current.sales_count + revenueStats.sale_count_delta;
+                    }
+
+                    if (expenseStats != null) {
+                        if (current.book_id == 0) {
+                            current.book_id = expenseStats.book_id;
+                        }
+
+                        current.expenses = round(current.expenses + expenseStats.expenses_delta);
+                        current.stock = current.stock + expenseStats.stock_delta;
+                        current.sales_count = current.sales_count + expenseStats.sale_count_delta;
+                    }
+
+                    current.profit = round(current.revenue - current.expenses);
+
+                    return current;
+                });
 
         statisticsTable
                 .toStream()
