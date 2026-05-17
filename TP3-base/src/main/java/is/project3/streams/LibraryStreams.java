@@ -27,7 +27,7 @@ import java.util.Properties;
 
 public class LibraryStreams {
 
-    private static final String BOOTSTRAP_SERVERS = "broker1:9092";
+    private static final String BOOTSTRAP_SERVERS = "broker1:9092,broker2:9092,broker3:9092";
 
     private static final String SALES_TOPIC = "book-sales";
     private static final String RESTOCKS_TOPIC = "book-restocks";
@@ -44,6 +44,10 @@ public class LibraryStreams {
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+        props.put(StreamsConfig.REPLICATION_FACTOR_CONFIG, 3);
+        props.put(StreamsConfig.producerPrefix("acks"), "all");
+        props.put(StreamsConfig.producerPrefix("enable.idempotence"), true);
+        props.put(StreamsConfig.producerPrefix("retries"), Integer.MAX_VALUE);
 
         Serde<SaleEvent> saleEventSerde = new JsonSerde<>(SaleEvent.class);
         Serde<RestockEvent> restockEventSerde = new JsonSerde<>(RestockEvent.class);

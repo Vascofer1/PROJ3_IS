@@ -16,7 +16,7 @@ import java.util.Random;
 public class SalesProducer {
 
     private static final String TOPIC = "book-sales";
-    private static final String BOOTSTRAP_SERVERS = "broker1:9092";
+    private static final String BOOTSTRAP_SERVERS = "broker1:9092,broker2:9092,broker3:9092";
 
     private static final String DB_URL = "jdbc:postgresql://database:5432/project3";
     private static final String DB_USER = "postgres";
@@ -40,6 +40,9 @@ public class SalesProducer {
         props.put("bootstrap.servers", BOOTSTRAP_SERVERS);
         props.put("key.serializer", StringSerializer.class.getName());
         props.put("value.serializer", StringSerializer.class.getName());
+        props.put("acks", "all");
+        props.put("enable.idempotence", true);
+        props.put("retries", Integer.MAX_VALUE);
 
         KafkaProducer<String, String> producer = new KafkaProducer<>(props);
         Gson gson = new Gson();
